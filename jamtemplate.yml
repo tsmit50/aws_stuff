@@ -1,0 +1,166 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  This creates a single Splunk instance with the AWS BOTSv5 scenario.
+  This is the AWS scenario created for Boss of the SOC version 5, executed and run at .conf 2020.
+  
+  The default login username/password is aws-user/dear-move
+
+  Currently the following regions are supported for deployment: us-east-1, 
+  us-west-1, ap-northeast-1, eu-west-1, ap-southeast-1
+Mappings:
+  AWSRegionArch2AMI:
+    us-east-1:
+      HVM64: ami-0a7e60bbce010bcad
+    us-west-1:
+      HVM64: ami-0e2b323e676ffe542
+    eu-west-1:
+      HVM64: ami-0c70cfebab26f5d28
+    ap-northeast-1:
+      HVM64: ami-0dc06ac5c0e903b24
+    ap-southeast-1:
+      HVM64: ami-074b0046229bb27c3
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.1.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: VPC
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    DependsOn: VPC
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    DependsOn:
+      - VPC
+      - InternetGateway
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.1.10.0/24
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.1.50.0/24
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: Private Subnet 1
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    DependsOn:
+      - VPC
+      - AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Public
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn:
+      - PublicRouteTable
+      - AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    DependsOn:
+      - PublicRouteTable
+      - PublicSubnet1
+      - AttachGateway
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Private
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    DependsOn:
+      - PublicRouteTable
+      - PrivateSubnet1
+      - AttachGateway
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+  PrivateNetworkAcl:
+    Type: 'AWS::EC2::NetworkAcl'
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Network
+          Value: Private
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: m5d.2xlarge
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          AssociatePublicIpAddress: 'true'
+          SubnetId: !Ref PublicSubnet1
+          GroupSet:
+            - !Ref InstanceSecurityGroup
+      ImageId: !FindInMap 
+        - AWSRegionArch2AMI
+        - !Ref 'AWS::Region'
+        - HVM64
+      Tags:
+        - Key: Name
+          Value: SplunkAWSBotsV
+  InstanceSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable SSH and HTTP/S traffic
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+Outputs:
+  PublicDNS:
+    Description: Public DNSName of the newly created EC2 instance
+    Value: !GetAtt 
+      - EC2Instance
+      - PublicDnsName
+  PublicIP:
+    Description: Public IP address of the newly created EC2 instance
+    Value: !GetAtt 
+      - EC2Instance
+      - PublicIp
