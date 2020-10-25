@@ -12,13 +12,13 @@ Mappings:
     us-east-1:
       HVM64: ami-029834ec831065584
     us-west-1:
-      HVM64: ami-0e2b323e676ffe542
+      HVM64: ami-0152d2b7ccb718c28
     eu-west-1:
-      HVM64: ami-0c70cfebab26f5d28
+      HVM64: ami-02b986c5cf186072e
     ap-northeast-1:
-      HVM64: ami-0dc06ac5c0e903b24
+      HVM64: ami-06953f3a7c265e85c
     ap-southeast-1:
-      HVM64: ami-074b0046229bb27c3
+      HVM64: ami-02451b38d26df8c01
 Resources:
   VPC:
     Type: AWS::EC2::VPC
