@@ -10,15 +10,15 @@ Description: >-
 Mappings:
   AWSRegionArch2AMI:
     us-east-1:
-      HVM64: ami-029834ec831065584
+      HVM64: ami-0fb1a14dac8411652
     us-west-1:
-      HVM64: ami-0152d2b7ccb718c28
+      HVM64: ami-048650890f73d5e0f
     eu-west-1:
-      HVM64: ami-02b986c5cf186072e
+      HVM64: ami-014f808e326a44adf
     ap-northeast-1:
-      HVM64: ami-06953f3a7c265e85c
+      HVM64: ami-05f2b96fc34da1a87
     ap-southeast-1:
-      HVM64: ami-02451b38d26df8c01
+      HVM64: ami-01f202ac688668595
 Resources:
   VPC:
     Type: AWS::EC2::VPC
